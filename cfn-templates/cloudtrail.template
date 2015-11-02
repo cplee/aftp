@@ -1,0 +1,73 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Resources" : {
+    "CloudTrailS3Bucket": {
+      "DeletionPolicy" : "Retain",
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "VersioningConfiguration" : {
+          "Status" : "Enabled"
+        },
+        "LifecycleConfiguration" : {
+          "Rules" : [
+            {
+              "Status" : "Enabled",
+              "ExpirationInDays" : 365
+            }
+          ]
+        }
+      }
+    },
+    "BucketPolicy" : {
+      "Type" : "AWS::S3::BucketPolicy",
+      "Properties" : {
+        "Bucket" : {"Ref" : "CloudTrailS3Bucket"},
+        "PolicyDocument" : {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AWSCloudTrailAclCheck",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+              },
+              "Action": "s3:GetBucketAcl",
+              "Resource": { "Fn::Join" : ["", ["arn:aws:s3:::", {"Ref":"CloudTrailS3Bucket"}]]}
+            },
+            {
+              "Sid": "AWSCloudTrailWrite",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+              },
+              "Action": "s3:PutObject",
+              "Resource": { "Fn::Join" : ["", ["arn:aws:s3:::", {"Ref":"CloudTrailS3Bucket"}, "/AWSLogs/", {"Ref":"AWS::AccountId"}, "/*"]]},
+              "Condition": {
+                "StringEquals": {
+                  "s3:x-amz-acl": "bucket-owner-full-control"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "CloudTrail" : {
+      "DependsOn" : ["BucketPolicy"],
+      "Type" : "AWS::CloudTrail::Trail",
+      "Properties" : {
+        "IncludeGlobalServiceEvents" : true,
+        "S3BucketName" : {"Ref":"CloudTrailS3Bucket"},
+        "IsLogging" : true
+      }
+    }
+  },
+  "Outputs" : {
+    "CloudTrailS3BucketName": {
+      "Value": {
+        "Ref": "CloudTrailS3Bucket"
+      },
+      "Description": "Name of the newly created S3 bucket."
+    }
+  }
+}
