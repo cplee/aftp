@@ -1,9 +1,8 @@
 # Overview
 This project utilizes an AWS [CloudFormation](https://aws.amazon.com/cloudformation/) template to provision a stack to serve up a static HTML page via an [NGINX](https://www.nginx.com/) web server.
 
-<center>`Deployment Diagram`</center>
-
 ![Deployment Diagram](docs/aftp-deployment.png)
+<center>`Deployment Diagram`</center>
 
 # Architectural Components
 
@@ -74,7 +73,7 @@ aws cloudformation create-stack --stack-name cloudtrail \
 ```
 
 # Creating the Stack via AWS SDK
-There is a utility in [bin/manager.rb](bin/manager.rb) that creates the stack.  Before running, you'll need to have Ruby installed and run `bundle install`
+An alternative to using the AWS CLI is to use the utility in [bin/manager.rb](bin/manager.rb) to creates the stack via the AWS Ruby SDK.  Before running, you'll need to have Ruby installed and run `bundle install`
 
 ```
 ./bin/manager.rb create -k my-keyname
