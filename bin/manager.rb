@@ -19,8 +19,10 @@ command :create do |c|
   c.summary = 'Creates the CloudFormation stack'
   c.description = ''
   c.option '-k', '--key-name KEY_NAME', 'Key name to use for EC2 hosts'
+  c.option '-a', '--app-repo REPO_NAME', 'Name of GitHub repo to use (default: \'cplee/aftp\')'
+  c.option '-c', '--app-commit COMMIT_ID', 'Commit to use (default: \'master\')'
   c.action do |args, options|
-    options.default  :region =>  'us-west-2', :stack_name => 'aftp'
+    options.default  :region =>  'us-west-2', :stack_name => 'aftp', :app_repo => 'cplee/aftp', :app_commit => 'master'
     template = JSON.load(File.read(File.dirname(__FILE__)+'/../cfn-templates/stack.template'))
 
     cfn = Aws::CloudFormation::Client.new(region: options.region)
@@ -29,6 +31,14 @@ command :create do |c|
         template_body: template.to_json,
         capabilities: ['CAPABILITY_IAM'],
         parameters: [
+          {
+              parameter_key: 'AppRepo',
+              parameter_value: options.app_repo
+          },
+          {
+              parameter_key: 'AppCommit',
+              parameter_value: options.app_commit
+          },
           {
               parameter_key: 'KeyName',
               parameter_value: options.key_name
@@ -54,6 +64,10 @@ command :create do |c|
       elsif resp.stacks[0].stack_status == 'CREATE_COMPLETE'
         in_progress = false
         print " Success!\n"
+
+        resp.stacks[0].outputs.each do |output|
+          puts "#{output['OutputKey']} : #{output['OutputValue']}"
+        end
       else
         print "."
         sleep(2)

@@ -19,6 +19,18 @@
       "Default": "t2.micro",
       "ConstraintDescription" : "Must be a valid EC2 instance type."
     },
+    "AppRepo" : {
+      "Description" : "Git repo to use for the app",
+      "Type": "String",
+      "Default" : "cplee/aftp",
+      "ConstraintDescription" : "Must be a valid github repo."
+    },
+    "AppCommit" : {
+      "Description" : "Git commit to use for the app",
+      "Type": "String",
+      "Default" : "master",
+      "ConstraintDescription" : "Must be a valid commit id or branch."
+    },
     "KeyName" : {
       "Description" : "EC2 keypair to use.",
       "Type": "AWS::EC2::KeyPair::KeyName",
@@ -717,20 +729,23 @@
           "config" : {
             "packages" : {
               "yum" : {
-                "httpd" : []
+                "nginx" : []
+              }
+            },
+
+            "sources" : {
+              "/opt/aftp" :  { "Fn::Join" : ["/", ["https://github.com",{"Ref" : "AppRepo"},"tarball",{"Ref" : "AppCommit"}] ] }
+            },
+
+
+            "commands" : {
+              "nginx_root" : {
+                "command" :  "sed -i 's|/usr/share/nginx/html;|/opt/aftp/app;|' /etc/nginx/nginx.conf",
+                "ignoreErrors" : "false"
               }
             },
 
             "files" : {
-              "/var/www/html/index.html" : {
-                "content" : { "Fn::Join" : ["\n", [
-                  "<h1>Automation for the People</h1>"
-                ]]},
-                "mode"    : "000644",
-                "owner"   : "root",
-                "group"   : "root"
-              },
-
               "/etc/cfn/cfn-hup.conf" : {
                 "content" : { "Fn::Join" : ["", [
                   "[main]\n",
@@ -758,7 +773,7 @@
 
             "services" : {
               "sysvinit" : {
-                "httpd"    : { "enabled" : "true", "ensureRunning" : "true" },
+                "nginx"    : { "enabled" : "true", "ensureRunning" : "true" },
                 "cfn-hup" : { "enabled" : "true", "ensureRunning" : "true",
                   "files" : ["/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf"]}
               }
@@ -782,6 +797,8 @@
           "         --stack ", { "Ref" : "AWS::StackName" },
           "         --resource WebServerLaunchConfig ",
           "         --region ", { "Ref" : "AWS::Region" }, "\n",
+
+          "curl -s http://localhost | grep 'Automation for the People'", "\n",
 
           "/opt/aws/bin/cfn-signal -e $? ",
           "         --stack ", { "Ref" : "AWS::StackName" },
