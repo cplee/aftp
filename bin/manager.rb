@@ -98,7 +98,7 @@ command :delete do |c|
 
       begin
         resp = cfn.describe_stacks(stack_name: options.stack_name)
-      rescue e
+      rescue
         resp = nil
       end
 
