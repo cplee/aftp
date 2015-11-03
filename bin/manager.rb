@@ -21,7 +21,7 @@ command :create do |c|
   c.option '-k', '--key-name KEY_NAME', 'Key name to use for EC2 hosts'
   c.action do |args, options|
     options.default  :region =>  'us-west-2', :stack_name => 'aftp'
-    template = JSON.load(File.read(File.dirname(__FILE__)+'/../cfn-templates/vpc.template'))
+    template = JSON.load(File.read(File.dirname(__FILE__)+'/../cfn-templates/stack.template'))
 
     cfn = Aws::CloudFormation::Client.new(region: options.region)
     cfn.create_stack({

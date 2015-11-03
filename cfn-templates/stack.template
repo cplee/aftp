@@ -4,20 +4,14 @@
   "Description" : "CloudFormation template to setup a VPC",
 
   "Parameters" : {
-    "BastionSSHAllow" : {
-      "Description" : "Subnet from which to allow SSH access to the bastion host",
+    "NATSSHAllow" : {
+      "Description" : "Subnet from which to allow SSH access to the NAT host",
       "Type" : "String",
       "MinLength": "9",
       "MaxLength": "18",
       "Default" : "0.0.0.0/0",
       "AllowedPattern" : "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
       "ConstraintDescription" : "must be a valid CIDR block: x.x.x.x/x."
-    },
-    "BastionInstanceType" : {
-      "Description" : "EC2 instance type (m3.medium, etc).",
-      "Type": "String",
-      "Default": "t2.micro",
-      "ConstraintDescription" : "Must be a valid EC2 instance type."
     },
     "WebServerInstanceType" : {
       "Description" : "EC2 instance type (m3.medium, etc).",
@@ -114,8 +108,18 @@
       "ap-northeast-1"   : {"PV64" : "ami-1a1b9f1a", "HVM64" : "ami-1c1b9f1c", "HVMG2" : "ami-f644c4f6"},
       "ap-southeast-1"   : {"PV64" : "ami-d24b4280", "HVM64" : "ami-d44b4286", "HVMG2" : "ami-12b5bc40"},
       "ap-southeast-2"   : {"PV64" : "ami-ef7b39d5", "HVM64" : "ami-db7b39e1", "HVMG2" : "ami-b3337e89"},
-      "sa-east-1"        : {"PV64" : "ami-5b098146", "HVM64" : "ami-55098148", "HVMG2" : "NOT_SUPPORTED"},
-      "cn-north-1"       : {"PV64" : "ami-bec45887", "HVM64" : "ami-bcc45885", "HVMG2" : "NOT_SUPPORTED"}
+      "sa-east-1"        : {"PV64" : "ami-5b098146", "HVM64" : "ami-55098148", "HVMG2" : "NOT_SUPPORTED"}
+    },
+    "AWSNATRegionArch2AMI" : {
+      "us-east-1"        : {"PV64" : "ami-c02b04a8", "HVM64" : "ami-b0210ed8"},
+      "us-west-2"        : {"PV64" : "ami-2dae821d", "HVM64" : "ami-75ae8245"},
+      "us-west-1"        : {"PV64" : "ami-67a54423", "HVM64" : "ami-ada746e9"},
+      "eu-west-1"        : {"PV64" : "ami-cb7de3bc", "HVM64" : "ami-ef76e898"},
+      "eu-central-1"     : {"PV64" : "ami-3604392b", "HVM64" : "ami-1e073a03"},
+      "ap-northeast-1"   : {"PV64" : "ami-c7e016c7", "HVM64" : "ami-11dc2a11"},
+      "ap-southeast-1"   : {"PV64" : "ami-b098a9e2", "HVM64" : "ami-1a9dac48"},
+      "ap-southeast-2"   : {"PV64" : "ami-0fed9d35", "HVM64" : "ami-43ee9e79"},
+      "sa-east-1"        : {"PV64" : "ami-93fb408e", "HVM64" : "ami-63fa417e"}
     }
 
   },
@@ -180,6 +184,16 @@
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackId" } },
           { "Key" : "Network", "Value" : "Private" }
         ]
+      }
+    },
+
+    "PrivateRoute" : {
+      "DependsOn" : ["PrivateRouteTable", "NATInstance"],
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "PrivateRouteTable" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "InstanceId" : { "Ref" : "NATInstance" }
       }
     },
 
@@ -413,11 +427,37 @@
       }
     },
 
-    "InboundEphemeralPortPublicNetworkAclEntry" : {
+    "InboundHTTPSPublicNetworkAclEntry" : {
       "Type" : "AWS::EC2::NetworkAclEntry",
       "Properties" : {
         "NetworkAclId" : { "Ref" : "PublicNetworkAcl" },
         "RuleNumber" : "101",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : { "From" : "443", "To" : "443" }
+      }
+    },
+
+    "InboundGITPublicNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : { "Ref" : "PublicNetworkAcl" },
+        "RuleNumber" : "102",
+        "Protocol" : "6",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : { "From" : "9418", "To" : "9418" }
+      }
+    },
+
+    "InboundEphemeralPortPublicNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : { "Ref" : "PublicNetworkAcl" },
+        "RuleNumber" : "103",
         "Protocol" : "6",
         "RuleAction" : "allow",
         "Egress" : "false",
@@ -430,11 +470,11 @@
       "Type" : "AWS::EC2::NetworkAclEntry",
       "Properties" : {
         "NetworkAclId" : { "Ref" : "PublicNetworkAcl" },
-        "RuleNumber" : "102",
+        "RuleNumber" : "104",
         "Protocol" : "6",
         "RuleAction" : "allow",
         "Egress" : "false",
-        "CidrBlock" : { "Ref" : "BastionSSHAllow" },
+        "CidrBlock" : { "Ref" : "NATSSHAllow" },
         "PortRange" : { "From" : "22", "To" : "22" }
       }
     },
@@ -474,29 +514,45 @@
       }
     },
 
-    "BastionSecurityGroup": {
+    "NATSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "GroupDescription": "Bastion SecurityGroup",
+        "GroupDescription" : "NAT Security Group",
+        "VpcId": { "Ref": "VPC" },
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackId" } },
           { "Key" : "Network", "Value" : "Public" } ],
+        "SecurityGroupIngress": [{
+          "CidrIp" : { "Ref" : "NATSSHAllow" },
+          "IpProtocol": "tcp",
+          "FromPort": "22",
+          "ToPort": "22"
+        }, {
+          "CidrIp" : "10.0.0.0/16",
+          "IpProtocol": "tcp",
+          "FromPort": "80",
+          "ToPort": "80"
+        }, {
+          "CidrIp" : "10.0.0.0/16",
+          "IpProtocol": "tcp",
+          "FromPort": "9418",
+          "ToPort": "9418"
+        }, {
+          "CidrIp" : "10.0.0.0/16",
+          "IpProtocol": "tcp",
+          "FromPort": "443",
+          "ToPort": "443"
+        } ],
         "SecurityGroupEgress": [{
           "CidrIp": "0.0.0.0/0",
           "IpProtocol": -1,
           "FromPort": -1,
           "ToPort": -1
-        }],
-        "SecurityGroupIngress": [{
-          "CidrIp" : { "Ref" : "BastionSSHAllow" },
-          "IpProtocol": "tcp",
-          "FromPort": "22",
-          "ToPort": "22"
-        }],
-        "VpcId" : {"Ref":"VPC"}
+        }]
       }
     },
-    "BastionRole": {
+
+    "NATRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
         "AssumeRolePolicyDocument": {
@@ -509,7 +565,7 @@
         },
         "Path": "/",
         "Policies": [ {
-          "PolicyName": "bastion_host",
+          "PolicyName": "nat_host",
           "PolicyDocument": {
             "Version": "2012-10-17",
             "Statement": [
@@ -584,95 +640,44 @@
         }]
       }
     },
-    "BastionInstanceProfile": {
+    "NATInstanceProfile": {
       "Type": "AWS::IAM::InstanceProfile",
       "Properties": {
         "Path": "/",
-        "Roles": [{"Ref": "BastionRole"}]
+        "Roles": [{"Ref": "NATRole"}]
       }
     },
-    "BastionInstance": {
+    "NATInstance": {
       "Type": "AWS::EC2::Instance",
       "DependsOn" : "VPCInternetGateway",
       "Properties": {
-        "ImageId" : { "Fn::FindInMap" : [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
-          { "Fn::FindInMap" : [ "AWSInstanceType2Arch", { "Ref" : "BastionInstanceType" }, "Arch" ] } ] },
-        "IamInstanceProfile": {"Ref":"BastionInstanceProfile"},
-        "InstanceType": {"Ref":"BastionInstanceType"},
+        "ImageId" : { "Fn::FindInMap" : [ "AWSNATRegionArch2AMI", { "Ref" : "AWS::Region" },
+          { "Fn::FindInMap" : [ "AWSInstanceType2Arch", "t2.micro", "Arch" ] } ] },
+        "IamInstanceProfile": {"Ref":"NATInstanceProfile"},
+        "InstanceType": "t2.micro",
         "KeyName": {"Ref":"KeyName"},
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackId" } },
           { "Key" : "Network", "Value" : "Public" }
         ],
+        "SourceDestCheck" : "false",
         "NetworkInterfaces" : [{
-          "GroupSet"                 : [{ "Ref" : "BastionSecurityGroup" }],
+          "GroupSet"                 : [{ "Ref" : "NATSecurityGroup" }],
           "AssociatePublicIpAddress" : "true",
           "DeviceIndex"              : "0",
           "DeleteOnTermination"      : "true",
           "SubnetId"                 : { "Ref" : "PublicSubnetAZ1" }
         }],
-        "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
-          "#!/bin/bash -xe\n",
-          "yum update -y \n",
-          "/opt/aws/bin/cfn-init -v ",
-          "         --stack ", { "Ref" : "AWS::StackName" },
-          "         --resource BastionInstance ",
-          "         --region ", { "Ref" : "AWS::Region" }, "\n",
-
-          "/opt/aws/bin/cfn-signal -e $? ",
-          "         --stack ", { "Ref" : "AWS::StackName" },
-          "         --resource BastionInstance ",
-          "         --region ", { "Ref" : "AWS::Region" }, "\n"
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+          "#!/bin/bash\n",
+          "yum update -y && yum install -y yum-cron && chkconfig yum-cron on\n"
         ]]}}
-      },
-      "Metadata" : {
-        "Comment": "Configure CFN",
-        "AWS::CloudFormation::Init": {
-          "config": {
-            "files": {
-              "/etc/cfn/cfn-hup.conf": {
-                "content": {
-                  "Fn::Join": [ "", [
-                      "[main]\n",
-                      "stack=", { "Ref": "AWS::StackId" }, "\n",
-                      "region=", { "Ref": "AWS::Region" }, "\n"
-                  ]]},
-                "mode": "000400",
-                "owner": "root",
-                "group": "root"
-              },
-              "/etc/cfn/hooks.d/cfn-auto-reloader.conf": {
-                "content": { "Fn::Join": [ "", [
-                      "[cfn-auto-reloader-hook]\n",
-                      "triggers=post.update\n",
-                      "path=Resources.WebServerInstance.Metadata.AWS::CloudFormation::Init\n",
-                      "action=/opt/aws/bin/cfn-init -v ",
-                      "         --stack ", { "Ref": "AWS::StackName" },
-                      "         --resource WebServerInstance ",
-                      "         --region ", { "Ref": "AWS::Region" }, "\n",
-                      "runas=root\n"
-                ]]}
-              }
-            },
-            "services": {
-              "sysvinit": {
-                "cfn-hup": {
-                  "enabled": "true", "ensureRunning": "true",
-                  "files": [ "/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf" ] }
-              }
-            }
-          }
-        }
-      },
-      "CreationPolicy" : {
-        "ResourceSignal" : {
-          "Timeout" : "PT15M"
-        }
       }
     },
 
     "WebServerASG": {
       "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "DependsOn" : ["NATInstance"],
       "CreationPolicy" : {
         "ResourceSignal" : {
           "Timeout" : "PT15M",
@@ -719,7 +724,7 @@
             "files" : {
               "/var/www/html/index.html" : {
                 "content" : { "Fn::Join" : ["\n", [
-                  "<h1>Congratulations, you have successfully launched the AWS CloudFormation sample.</h1>"
+                  "<h1>Automation for the People</h1>"
                 ]]},
                 "mode"    : "000644",
                 "owner"   : "root",
@@ -786,17 +791,77 @@
       }
     },
 
+    "WebServerScaleUpPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : { "Ref" : "WebServerASG" },
+        "Cooldown" : "60",
+        "ScalingAdjustment" : "1"
+      }
+    },
+    "WebServerScaleDownPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : { "Ref" : "WebServerASG" },
+        "Cooldown" : "60",
+        "ScalingAdjustment" : "-1"
+      }
+    },
+
+    "CPUAlarmHigh": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": "Scale-up if CPU > 80% for 10 minutes",
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Statistic": "Average",
+        "Period": "300",
+        "EvaluationPeriods": "2",
+        "Threshold": "80",
+        "AlarmActions": [ { "Ref": "WebServerScaleUpPolicy" } ],
+        "Dimensions": [
+          {
+            "Name": "AutoScalingGroupName",
+            "Value": { "Ref": "WebServerASG" }
+          }
+        ],
+        "ComparisonOperator": "GreaterThanThreshold"
+      }
+    },
+    "CPUAlarmLow": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": "Scale-down if CPU < 30% for 10 minutes",
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Statistic": "Average",
+        "Period": "300",
+        "EvaluationPeriods": "2",
+        "Threshold": "30",
+        "AlarmActions": [ { "Ref": "WebServerScaleDownPolicy" } ],
+        "Dimensions": [
+          {
+            "Name": "AutoScalingGroupName",
+            "Value": { "Ref": "WebServerASG" }
+          }
+        ],
+        "ComparisonOperator": "LessThanThreshold"
+      }
+    },
+
     "WebServerSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "DependsOn" : "VPC",
       "Properties": {
-        "GroupDescription": "Enable SSH access from bastion and HTTP access from the ELB",
+        "GroupDescription": "Enable SSH access from NAT host and HTTP access from the ELB",
         "VpcId" : {"Ref" : "VPC"},
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackId" } },
           { "Key" : "Network", "Value" : "Private" } ],
         "SecurityGroupIngress": [
-          { "IpProtocol": "tcp", "FromPort": "22", "ToPort": "22", "SourceSecurityGroupId": { "Ref" : "BastionSecurityGroup" } },
+          { "IpProtocol": "tcp", "FromPort": "22", "ToPort": "22", "SourceSecurityGroupId": { "Ref" : "NATSecurityGroup" } },
           { "IpProtocol": "tcp", "FromPort": "80", "ToPort": "80", "SourceSecurityGroupId": { "Ref" : "WebServerELBSecurityGroup" } }
         ]
       }
@@ -850,7 +915,6 @@
             "Principal": "*",
             "Action":["s3:GetObject"],
             "Resource":[
-              { "Fn::Join": ["",["arn:aws:s3:::cloudformation-", { "Ref": "AWS::Region" },"/*"]]},
               { "Fn::Join": ["",["arn:aws:s3:::cloudformation-waitcondition-", { "Ref": "AWS::Region" },"/*"]]},
               "arn:aws:s3:::packages.*.amazonaws.com/*",
               "arn:aws:s3:::repo.*.amazonaws.com/*"
@@ -865,9 +929,9 @@
   },
 
   "Outputs" : {
-    "BastionIPAddress" : {
-      "Description" : "Bastion Host IP Address",
-      "Value": { "Fn::GetAtt" : [ "BastionInstance", "PublicIp" ] }
+    "NATIPAddress" : {
+      "Description" : "NAT Public IP Address",
+      "Value": { "Fn::GetAtt" : [ "NATInstance", "PublicIp" ] }
     },
     "URL": {
       "Description": "URL of the website",
