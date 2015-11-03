@@ -66,7 +66,7 @@ command :create do |c|
         print " Success!\n"
 
         resp.stacks[0].outputs.each do |output|
-          puts "#{output['OutputKey']} : #{output['OutputValue']}"
+          puts "#{output['output_key']} : #{output['output_value']}"
         end
       else
         print "."

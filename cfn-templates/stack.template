@@ -1,7 +1,7 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
-  "Description" : "CloudFormation template to setup a VPC",
+  "Description" : "CloudFormation template for 'Automation for the People'",
 
   "Parameters" : {
     "NATSSHAllow" : {

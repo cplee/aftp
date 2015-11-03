@@ -1,10 +1,6 @@
-# Running
-aws cloudformation create-stack --stack-name aftp --template-body file:///Users/casele/Dev/sites/aftp/cfn-templates/stack.template  --parameters ParameterKey=KeyName,ParameterValue=casele-ec2  --capabilities "CAPABILITY_IAM"
-
-# enable cloudtrail
-aws cloudformation create-stack --stack-name cloudtrail --template-body file:///Users/casele/Dev/sites/aftp/cfn-templates/cloudtrail.template
-
-
+# Overview
+# Deployment diagram
+# Process diagram
 # architecture
 * security (SGs and ACL)
 * bastion/NAT
@@ -14,15 +10,39 @@ aws cloudformation create-stack --stack-name cloudtrail --template-body file:///
 * multiple zones
 * cloudwatch -> ASG
 
-# Deployment diagram
+# upload template to S3
 
-# Process diagram
+# Creating the Stack via AWS CLI
 
-# bootstrap script?
-- download template
-- run create-stack
+Ensure that you have the AWS CLI installed configured as per the [user guide](http://docs.aws.amazon.com/cli/latest/userguide/installing.html).
 
-# Manager utility
-* Prerequisites - Ruby
-* `bundle install`
+```
+aws cloudformation create-stack --stack-name aftp \
+    --template-body file:///path/to/aftp/cfn-templates/stack.template \
+    --parameters ParameterKey=KeyName,ParameterValue=my-keyname  \
+    --capabilities "CAPABILITY_IAM" 
+```
+
+# CloudTrail
+In order to audit the API calls in your AWS account, CloudTrail should always be enabled.  You can use the provided CloudFormation template to enable it:
+
+```
+aws cloudformation create-stack --stack-name cloudtrail --template-body file:///path/to/aftp/cfn-templates/cloudtrail.template
+```
+
+# Creating the Stack via AWS SDK
+There is a utility in [bin/manager.rb](bin/manager.rb) that creates the stack.  Before running, you'll need to have Ruby installed and run `bundle install`
+
+```
+./bin/manager.rb create -k my-keyname
+```
+
+You can then destroy the stack with:
+
+```
+./bin/manager.rb delete
+```
+
+
+
 
