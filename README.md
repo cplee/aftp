@@ -22,7 +22,7 @@ The following components were utilized for securing the environment:
 ### Cost-efficiency
 The following components were leveraged in an effort to make the most cost-efficient system:
 
-* **Auto Scaling Groups* - An auto scaling group was created for the web server instances to allow the instances to scale up automatically based on load and then scale back down when traffic subsides.  A minimum of 2 instances will always be running but a maximum of 4 can be provisioned if load demands it.  This enables only paying for the utilization that is required for the current load.
+* **Auto Scaling Groups** - An auto scaling group was created for the web server instances to allow the instances to scale up automatically based on load and then scale back down when traffic subsides.  A minimum of 2 instances will always be running but a maximum of 4 can be provisioned if load demands it.  This enables only paying for the utilization that is required for the current load.
 * **CloudWatch Metrcis** - Auto scaling is triggered up or down based on metrics coming out of cloudwatch for the instances.  Currently, the CPU metric is used to determine the need for more or less instances.
 * **t2.micro** - The t2.micro instance type was chosen for the NAT instance and the web server hosts to limit cost (free tier eligible)
 
