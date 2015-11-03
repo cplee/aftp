@@ -18,12 +18,23 @@ command :create do |c|
   c.syntax = 'manager create [options]'
   c.summary = 'Creates the CloudFormation stack'
   c.description = ''
+  c.option '-k', '--key-name KEY_NAME', 'Key name to use for EC2 hosts'
   c.action do |args, options|
     options.default  :region =>  'us-west-2', :stack_name => 'aftp'
     template = JSON.load(File.read(File.dirname(__FILE__)+'/../cfn-templates/vpc.template'))
 
     cfn = Aws::CloudFormation::Client.new(region: options.region)
-    cfn.create_stack({ stack_name: options.stack_name, template_body: template.to_json })
+    cfn.create_stack({
+        stack_name: options.stack_name,
+        template_body: template.to_json,
+        capabilities: ['CAPABILITY_IAM'],
+        parameters: [
+          {
+              parameter_key: 'KeyName',
+              parameter_value: options.key_name
+          }
+        ]
+    })
 
 
     print "Waiting for create to complete..."
