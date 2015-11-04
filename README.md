@@ -50,7 +50,7 @@ Ensure that you have the AWS CLI installed configured as per the [user guide](ht
 
 ```
 aws cloudformation create-stack --stack-name aftp \
-    --template-url  https://s3-us-west-2.amazonaws.com/cplee-cfn/stack.template \
+    --template-url  https://s3-us-west-2.amazonaws.com/cplee-cfn/stack-codedeploy.template \
     --parameters ParameterKey=KeyName,ParameterValue=my-keyname  \
                  ParameterKey=AppCommit,ParameterValue=`git ls-remote git@github.com:cplee/aftp.git master | cut -f 1`  \
     --capabilities "CAPABILITY_IAM" 
