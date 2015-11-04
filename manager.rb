@@ -15,7 +15,7 @@ global_option '-r', '--region REGION',
               'Region to use (default: "us-west-2")'
 default_command :create
 
-default_commit = `git rev-list -n 1 HEAD`
+default_commit = `git rev-list -n 1 HEAD`.strip
 
 command :create do |c|
   c.syntax = 'manager create [options]'
@@ -26,7 +26,7 @@ command :create do |c|
   c.option '-a', '--app-repo REPO_NAME',
            'Name of GitHub repo to use (default: "cplee/aftp")'
   c.option '-c', '--app-commit COMMIT_ID',
-           "Commit to use (default: \"#{default_commit}\")"
+           "Commit to use (default: #{default_commit})"
   c.action do |_args, options|
     options.default region: 'us-west-2', stack_name: 'aftp',
                     app_repo: 'cplee/aftp', app_commit: default_commit
