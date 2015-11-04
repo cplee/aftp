@@ -721,61 +721,155 @@
       }
     },
 
+    "WaitHandle": {
+      "Type": "AWS::CloudFormation::WaitConditionHandle"
+    },
+    "WaitCondition": {
+      "Type": "AWS::CloudFormation::WaitCondition",
+      "Properties": {
+        "Count": "2",
+        "Handle": { "Ref": "WaitHandle" },
+        "Timeout": "900"
+      }
+    },
+    "CodeDeployTrustRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Sid": "1",
+              "Effect": "Allow",
+              "Principal": {
+                "Service" : [ { "Fn::Join": [ "", [ "codedeploy.", { "Ref": "AWS::Region" }, ".amazonaws.com" ] ] } ]
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Path": "/"
+      }
+    },
+    "CodeDeployRolePolicies": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "CodeDeployPolicy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Resource": [ "*" ],
+              "Action": [ "ec2:Describe*" ]
+            },
+            {
+              "Effect": "Allow",
+              "Resource": [ "*" ],
+              "Action": [
+                "autoscaling:CompleteLifecycleAction",
+                "autoscaling:DeleteLifecycleHook",
+                "autoscaling:DescribeLifecycleHooks",
+                "autoscaling:DescribeAutoScalingGroups",
+                "autoscaling:PutLifecycleHook",
+                "autoscaling:RecordLifecycleActionHeartbeat"
+              ]
+            }
+          ]
+        },
+        "Roles": [ { "Ref": "CodeDeployTrustRole" } ]
+      }
+    },
+    "InstanceRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [ "ec2.amazonaws.com" ]
+              },
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ]
+        },
+        "Path": "/"
+      }
+    },
+    "InstanceRolePolicies": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "InstanceRole",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "autoscaling:Describe*",
+                "cloudformation:Describe*",
+                "cloudformation:GetTemplate",
+                "s3:Get*"
+              ],
+              "Resource": "*"
+            }
+          ]
+        },
+        "Roles": [ { "Ref": "InstanceRole" }
+        ]
+      }
+    },
+
+    "InstanceRoleInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [ { "Ref": "InstanceRole" }
+        ]
+      }
+    },
+
+    "AFTPApplication" : {
+      "Type" : "AWS::CodeDeploy::Application"
+    },
+    "TwentyFivePercentAtATime" : {
+      "Type" : "AWS::CodeDeploy::DeploymentConfig",
+      "Properties" : {
+        "MinimumHealthyHosts" : {
+          "Type" : "FLEET_PERCENT",
+          "Value" : "75"
+        }
+      }
+    },
+    "AFTPDeploymentGroup" : {
+      "Type" : "AWS::CodeDeploy::DeploymentGroup",
+      "Properties" : {
+        "ApplicationName" : {"Ref" : "AFTPApplication"},
+        "AutoScalingGroups" : [ {"Ref" : "WebServerASG" } ],
+        "Deployment" : {
+          "Description" : "AFTP deployment",
+          "IgnoreApplicationStopFailures" : "true",
+          "Revision" : {
+            "RevisionType" : "GitHub",
+            "GitHubLocation" : {
+              "CommitId" : {"Ref" : "AppCommit"},
+              "Repository" : {"Ref" : "AppRepo"}
+            }
+          }
+        },
+        "ServiceRoleArn" : {"Ref" : "CodeDeployTrustRole"}
+      }
+    },
+
+
     "WebServerLaunchConfig": {
       "Type": "AWS::AutoScaling::LaunchConfiguration",
       "Metadata" : {
         "Comment" : "Install a Web Server",
-        "AWS::CloudFormation::Init" : {
-          "config" : {
-            "packages" : {
-              "yum" : {
-                "nginx" : []
-              }
-            },
-
-            "sources" : {
-              "/opt/aftp" :  { "Fn::Join" : ["/", ["https://github.com",{"Ref" : "AppRepo"},"tarball",{"Ref" : "AppCommit"}] ] }
-            },
-
-
-            "commands" : {
-              "nginx_root" : {
-                "command" :  "sed -i 's|/usr/share/nginx/html;|/opt/aftp/app;|' /etc/nginx/nginx.conf",
-                "ignoreErrors" : "false"
-              }
-            },
-
-            "files" : {
-              "/etc/cfn/cfn-hup.conf" : {
-                "content" : { "Fn::Join" : ["", [
-                  "[main]\n",
-                  "stack=", { "Ref" : "AWS::StackId" }, "\n",
-                  "region=", { "Ref" : "AWS::Region" }, "\n"
-                ]]},
-                "mode"    : "000400",
-                "owner"   : "root",
-                "group"   : "root"
-              },
-
-              "/etc/cfn/hooks.d/cfn-auto-reloader.conf" : {
-                "content": { "Fn::Join" : ["", [
-                  "[cfn-auto-reloader-hook]\n",
-                  "triggers=post.update\n",
-                  "path=Resources.WebServerLaunchConfig.Metadata.AWS::CloudFormation::Init\n",
-                  "action=/opt/aws/bin/cfn-init -v ",
-                  "         --stack ", { "Ref" : "AWS::StackName" },
-                  "         --resource WebServerLaunchConfig ",
-                  "         --region ", { "Ref" : "AWS::Region" }, "\n",
-                  "runas=root\n"
-                ]]}
-              }
-            },
-
-            "services" : {
-              "sysvinit" : {
-                "nginx"    : { "enabled" : "true", "ensureRunning" : "true" },
-                "cfn-hup" : { "enabled" : "true", "ensureRunning" : "true",
-                  "files" : ["/etc/cfn/cfn-hup.conf", "/etc/cfn/hooks.d/cfn-auto-reloader.conf"]}
+        "AWS::CloudFormation::Init": {
+          "services": {
+            "sysvint": {
+              "codedeploy-agent": {
+                "enabled": "true",
+                "ensureRunning": "true"
               }
             }
           }
@@ -789,22 +883,29 @@
         },
         "SecurityGroups": [ { "Ref": "WebServerSecurityGroup" } ],
         "InstanceType": { "Ref": "WebServerInstanceType" },
-        "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
-          "#!/bin/bash -xe\n",
-          "yum update -y \n",
+        "IamInstanceProfile": { "Ref": "InstanceRoleInstanceProfile" },
+        "UserData": { "Fn::Base64": { "Fn::Join": [ "", [
+                "#!/bin/bash -ex\n",
+                "yum update -y aws-cfn-bootstrap\n",
+                "yum install -y aws-cli\n",
 
-          "/opt/aws/bin/cfn-init -v ",
-          "         --stack ", { "Ref" : "AWS::StackName" },
-          "         --resource WebServerLaunchConfig ",
-          "         --region ", { "Ref" : "AWS::Region" }, "\n",
+                "# Helper function.\n",
+                "function error_exit\n",
+                "{\n",
+                "  /opt/aws/bin/cfn-signal -e 1 -r \"$1\" '", { "Ref": "WaitHandle" }, "'\n",
+                "  exit 1\n",
+                "}\n",
 
-          "curl -s http://localhost | grep 'Automation for the People'", "\n",
+                "# Install the AWS CodeDeploy Agent.\n",
+                "cd /home/ec2-user/\n",
+                "aws s3 cp 's3://aws-codedeploy-",{ "Ref": "AWS::Region"},"/latest/codedeploy-agent.noarch.rpm' . || error_exit 'Failed to download AWS CodeDeploy Agent.'\n",
+                "yum -y install codedeploy-agent.noarch.rpm || error_exit 'Failed to install AWS CodeDeploy Agent.' \n",
+                "/opt/aws/bin/cfn-init -s ", { "Ref": "AWS::StackId" }, " -r WebServerLaunchConfig --region ", { "Ref": "AWS::Region" },
+                    " || error_exit 'Failed to run cfn-init.'\n",
 
-          "/opt/aws/bin/cfn-signal -e $? ",
-          "         --stack ", { "Ref" : "AWS::StackName" },
-          "         --resource WebServerASG ",
-          "         --region ", { "Ref" : "AWS::Region" }, "\n"
-        ]]}}
+                "# All is well, so signal success.\n",
+                "/opt/aws/bin/cfn-signal -e 0 -r \"AWS CodeDeploy Agent setup complete.\" '", { "Ref": "WaitHandle" }, "'\n"
+        ] ] } }
       }
     },
 

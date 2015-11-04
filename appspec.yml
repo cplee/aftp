@@ -1,0 +1,11 @@
+os: linux
+
+files:
+  - source: aws/codedeploy/install_nginx.sh
+    destination: install_nginx.sh
+
+hooks:
+   BeforeInstall:
+     - location: install_nginx.sh
+       timeout: 180
+
