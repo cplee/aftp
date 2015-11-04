@@ -35,7 +35,8 @@ The reliability of the site is achieved with the following components:
 * **Multiple AZs** - The web servers are deployed in multiple availability zones to ensure that the system is still available even in the event of a service outage in one of the AZs.
 * **Elastic Load Balancers** - A cross zone ELB is configured in front of the web server instances to evenly balance the load across the instances.  Also the ELB uses an HTTP monitor to measure the health of each web server instance and will pull instances out of service if they are unhealthy.
 * **Blue-Green Deployments** - The system allows [Blue-Green Deployments](http://martinfowler.com/bliki/BlueGreenDeployment.html) to be performed to improve the reliability of the system, even during an upgrade.  The process would consist of using the CloudFormation template to provision a new stack and then using Route53 [weighted round-robin](http://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-policy.html) to send only small percentage of traffic to the new stack (also referred to as canary deployment).  The traffic is then gradually moved to the new stack and the old is eventually turned off. 
-* **Infrastructure Testing** - The CloudFormation init script for each web server includes a test to validate that the correct static page is being served by the web server.  If the test doesn't pass, the server is terminated.
+* **Infrastructure Automation** - CodeDeploy is used to deploy the app to ensure consistency
+* **Infrastructure Testing** - The CodeDeploy script for each web server includes a test to validate that the correct static page is being served by the web server.  If the test doesn't pass, the server is terminated.
 
 ### Performance
 Performance of the site is accomplished with the following components:
