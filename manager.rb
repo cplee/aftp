@@ -15,6 +15,8 @@ global_option '-r', '--region REGION',
               'Region to use (default: "us-west-2")'
 default_command :create
 
+default_commit = `git rev-list -n 1 HEAD`
+
 command :create do |c|
   c.syntax = 'manager create [options]'
   c.summary = 'Creates the CloudFormation stack'
@@ -24,10 +26,10 @@ command :create do |c|
   c.option '-a', '--app-repo REPO_NAME',
            'Name of GitHub repo to use (default: "cplee/aftp")'
   c.option '-c', '--app-commit COMMIT_ID',
-           'Commit to use (default: "master")'
+           "Commit to use (default: \"#{default_commit}\")"
   c.action do |_args, options|
     options.default region: 'us-west-2', stack_name: 'aftp',
-                    app_repo: 'cplee/aftp', app_commit: 'master'
+                    app_repo: 'cplee/aftp', app_commit: default_commit
     template = JSON.load(File.read(
        File.dirname(__FILE__) + '/aws/cfn-templates/stack.template')
     )

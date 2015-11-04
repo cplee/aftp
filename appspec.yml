@@ -7,9 +7,9 @@ files:
 
 hooks:
   ApplicationStart:
-    - location: deploy-hooks/install-nginx.sh
+    - location: aws/deploy-hooks/install-nginx.sh
       timeout: 1800
       runas: root
   ValidateService:
-    - location: deploy-hooks/verify-deployment.sh
+    - location: aws/deploy-hooks/verify-deployment.sh
       runas: root

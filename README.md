@@ -52,6 +52,7 @@ Ensure that you have the AWS CLI installed configured as per the [user guide](ht
 aws cloudformation create-stack --stack-name aftp \
     --template-url  https://s3-us-west-2.amazonaws.com/cplee-cfn/stack.template \
     --parameters ParameterKey=KeyName,ParameterValue=my-keyname  \
+                 ParameterKey=AppCommit,ParameterValue=`git ls-remote git@github.com:cplee/aftp.git master | cut -f 1`  \
     --capabilities "CAPABILITY_IAM" 
 ```
 
@@ -63,7 +64,7 @@ The following parameters can be provided to the template:
 **NATSSHAllow** | The CIDR block from which to allow SSH access to the NAT instance (Default: **0.0.0.0/0**)
 **WebServerInstanceType** | The instance type to use for the web servers (Default: **t2.micro**)
 **AppRepo** | The GitHub repository to pull the static HTML page from (Default: **cplee/aftp**)
-**AppCommit** | The commit id (branch, tag or SHA) to install from. (Default: **master**)
+**AppCommit** | The commit id (full SHA 40-digit hex number) to install from. (**REQUIRED**)
 
 # CloudTrail
 In order to audit the API calls in your AWS account, CloudTrail should always be enabled.  You can use the provided CloudFormation template to enable it:
@@ -89,7 +90,7 @@ The following options can be provided to control the creation of the CloudFormat
 -n,--stack-name  | The name to use for the stack (Default: **aftp**)
 -r,--region  | The region to use for the stack (Default: **us-west-2**)
 -a,--app-repo  | Name of GitHub repo to use (Default: **cplee/aftp**)
--c,--app-commit | The commit id (branch, tag or SHA) to install from. (Default: **master**)
+-c,--app-commit | The commit id (full SHA 40-digit hex number) to install from. (Default: `git rev-list -n 1 HEAD`)
 
 
 
