@@ -107,5 +107,13 @@ The following options can be provided to control the deletion of the CloudFormat
 -n,--stack-name  | The name of the stack to delete (Default: **aftp**)
 -r,--region  | The region to use for the stack (Default: **us-west-2**)
 
+# Upload the templates to S3
+
+```
+aws s3 cp aws/cfn-templates/stack.template s3://cplee-cfn/stack-codedeploy.template
+
+aws s3 cp aws/cfn-templates/cloudtrail.template s3://cplee-cfn/cloudtrail.template
+```
+
 
 
