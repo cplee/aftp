@@ -1,5 +1,9 @@
 os: linux
 
+files:
+  -source: app
+   destination: /opt/aftp/app
+
 hooks:
   ApplicationStart:
     - location: deploy_hooks/install-nginx.sh
