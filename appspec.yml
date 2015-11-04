@@ -1,8 +1,8 @@
 os: linux
 
 files:
-  -source: app
-   destination: /opt/aftp/app
+  - source: app
+    destination: /opt/aftp/app
 
 hooks:
   ApplicationStart:

@@ -687,17 +687,6 @@
       }
     },
 
-    "WaitHandle": {
-      "Type": "AWS::CloudFormation::WaitConditionHandle"
-    },
-    "WaitCondition": {
-      "Type": "AWS::CloudFormation::WaitCondition",
-      "Properties": {
-        "Count": "2",
-        "Handle": { "Ref": "WaitHandle" },
-        "Timeout": "900"
-      }
-    },
     "CodeDeployTrustRole": {
       "Type": "AWS::IAM::Role",
       "Properties": {
@@ -813,6 +802,7 @@
         "Deployment" : {
           "Description" : "AFTP deployment",
           "IgnoreApplicationStopFailures" : "true",
+          ""
           "Revision" : {
             "RevisionType" : "GitHub",
             "GitHubLocation" : {
@@ -828,11 +818,18 @@
     "WebServerASG": {
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "DependsOn" : ["NATInstance"],
+      "CreationPolicy" : {
+        "ResourceSignal" : {
+          "Timeout" : "PT15M",
+          "Count"   : "2"
+        }
+      },
       "UpdatePolicy" : {
         "AutoScalingRollingUpdate" : {
           "MaxBatchSize" : "1",
           "MinInstancesInService" : "1",
-          "PauseTime" : "PT15M"
+          "PauseTime" : "PT15M",
+          "WaitOnResourceSignals": "true"
         }
       },
       "Properties": {
@@ -885,7 +882,10 @@
                 "# Helper function.\n",
                 "function error_exit\n",
                 "{\n",
-                "  /opt/aws/bin/cfn-signal -e 1 -r \"$1\" '", { "Ref": "WaitHandle" }, "'\n",
+                "  /opt/aws/bin/cfn-signal -e 1 ",
+                "         --stack ", { "Ref" : "AWS::StackName" },
+                "         --resource WebServerASG ",
+                "         --region ", { "Ref" : "AWS::Region" }, "\n",
                 "  exit 1\n",
                 "}\n",
 
@@ -897,7 +897,10 @@
                     " || error_exit 'Failed to run cfn-init.'\n",
 
                 "# All is well, so signal success.\n",
-                "/opt/aws/bin/cfn-signal -e 0 -r \"AWS CodeDeploy Agent setup complete.\" '", { "Ref": "WaitHandle" }, "'\n"
+                "/opt/aws/bin/cfn-signal -e 0 ",
+                "         --stack ", { "Ref" : "AWS::StackName" },
+                "         --resource WebServerASG ",
+                "         --region ", { "Ref" : "AWS::Region" }, "\n"
         ] ] } }
       }
     },
@@ -1027,7 +1030,6 @@
             "Action":["s3:GetObject"],
             "Resource":[
               { "Fn::Join": ["",["arn:aws:s3:::cloudformation-waitcondition-", { "Ref": "AWS::Region" },"/*"]]},
-              { "Fn::Join": ["",["arn:aws:s3:::cloudformation-waitcondition-", { "Ref": "AWS::Region" },".s3-",{ "Ref": "AWS::Region"},".amazonaws.com/*"]]},
               { "Fn::Join": ["",["arn:aws:s3:::aws-codedeploy-", { "Ref": "AWS::Region" },"/*"]]},
               "arn:aws:s3:::packages.*.amazonaws.com/*",
               "arn:aws:s3:::repo.*.amazonaws.com/*"

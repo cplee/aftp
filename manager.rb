@@ -37,6 +37,7 @@ command :create do |c|
         stack_name: options.stack_name,
         template_body: template.to_json,
         capabilities: ['CAPABILITY_IAM'],
+        on_failure: 'DO_NOTHING',
         parameters: [
           {
             parameter_key: 'AppRepo',
