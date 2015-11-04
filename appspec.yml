@@ -2,10 +2,17 @@ os: linux
 
 files:
   - source: aws/codedeploy/install_nginx.sh
-    destination: install_nginx.sh
+    destination: /tmp/aftp/install_nginx.sh
+
+permissions:
+  - object: /tmp/aftp/
+    pattern: "*.sh
+    mode: 755
+    type:
+      - file
 
 hooks:
    BeforeInstall:
-     - location: install_nginx.sh
+     - location: /tmp/aftp/install_nginx.sh
        timeout: 180
 
