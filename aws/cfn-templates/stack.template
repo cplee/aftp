@@ -687,40 +687,6 @@
       }
     },
 
-    "WebServerASG": {
-      "Type": "AWS::AutoScaling::AutoScalingGroup",
-      "DependsOn" : ["NATInstance"],
-      "CreationPolicy" : {
-        "ResourceSignal" : {
-          "Timeout" : "PT15M",
-          "Count"   : "2"
-        }
-      },
-      "UpdatePolicy" : {
-        "AutoScalingRollingUpdate" : {
-          "MaxBatchSize" : "1",
-          "MinInstancesInService" : "1",
-          "PauseTime" : "PT15M",
-          "WaitOnResourceSignals": "true"
-        }
-      },
-      "Properties": {
-        "VPCZoneIdentifier": [
-          { "Ref" : "PrivateSubnetAZ1"},
-          { "Ref" : "PrivateSubnetAZ2"},
-          { "Ref" : "PrivateSubnetAZ3"}
-        ],
-        "LaunchConfigurationName": { "Ref": "WebServerLaunchConfig" },
-        "MinSize": "2",
-        "MaxSize": "4",
-        "Tags" : [
-          { "Key" : "Application", "Value" : { "Ref" : "AWS::StackId" }, "PropagateAtLaunch" : true },
-          { "Key" : "Network", "Value" : "Private" , "PropagateAtLaunch" : true}
-        ],
-        "LoadBalancerNames": [ { "Ref": "WebServerELB" } ]
-      }
-    },
-
     "WaitHandle": {
       "Type": "AWS::CloudFormation::WaitConditionHandle"
     },
@@ -855,7 +821,34 @@
             }
           }
         },
-        "ServiceRoleArn" : {"Ref" : "CodeDeployTrustRole"}
+        "ServiceRoleArn" : { "Fn::GetAtt": [ "CodeDeployTrustRole", "Arn" ] }
+      }
+    },
+
+    "WebServerASG": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "DependsOn" : ["NATInstance"],
+      "UpdatePolicy" : {
+        "AutoScalingRollingUpdate" : {
+          "MaxBatchSize" : "1",
+          "MinInstancesInService" : "1",
+          "PauseTime" : "PT15M"
+        }
+      },
+      "Properties": {
+        "VPCZoneIdentifier": [
+          { "Ref" : "PrivateSubnetAZ1"},
+          { "Ref" : "PrivateSubnetAZ2"},
+          { "Ref" : "PrivateSubnetAZ3"}
+        ],
+        "LaunchConfigurationName": { "Ref": "WebServerLaunchConfig" },
+        "MinSize": "2",
+        "MaxSize": "4",
+        "Tags" : [
+          { "Key" : "Application", "Value" : { "Ref" : "AWS::StackId" }, "PropagateAtLaunch" : true },
+          { "Key" : "Network", "Value" : "Private" , "PropagateAtLaunch" : true}
+        ],
+        "LoadBalancerNames": [ { "Ref": "WebServerELB" } ]
       }
     },
 
@@ -1054,6 +1047,10 @@
     "URL": {
       "Description": "URL of the website",
       "Value": { "Fn::Join": [ "", [ "http://", { "Fn::GetAtt": [ "WebServerELB", "DNSName" ] } ] ] }
+    },
+    "CodeDeployTrustRoleARN": {
+      "Description": "ARN for CodeDeploy trust role",
+      "Value": { "Fn::GetAtt": [ "CodeDeployTrustRole", "Arn" ] }
     }
 
   }

@@ -29,7 +29,7 @@ command :create do |c|
     options.default region: 'us-west-2', stack_name: 'aftp',
                     app_repo: 'cplee/aftp', app_commit: 'master'
     template = JSON.load(File.read(
-       File.dirname(__FILE__) + '/cfn-templates/stack.template')
+       File.dirname(__FILE__) + '/aws/cfn-templates/stack.template')
     )
 
     cfn = Aws::CloudFormation::Client.new(region: options.region)
