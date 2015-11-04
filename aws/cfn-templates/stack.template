@@ -1027,6 +1027,7 @@
             "Action":["s3:GetObject"],
             "Resource":[
               { "Fn::Join": ["",["arn:aws:s3:::cloudformation-waitcondition-", { "Ref": "AWS::Region" },"/*"]]},
+              { "Fn::Join": ["",["arn:aws:s3:::aws-codedeploy-", { "Ref": "AWS::Region" },"/*"]]},
               "arn:aws:s3:::packages.*.amazonaws.com/*",
               "arn:aws:s3:::repo.*.amazonaws.com/*"
             ]
