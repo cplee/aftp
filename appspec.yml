@@ -1,4 +1,5 @@
 os: linux
+version: 0.0
 
 files:
   - source: app

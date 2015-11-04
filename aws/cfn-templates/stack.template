@@ -802,7 +802,6 @@
         "Deployment" : {
           "Description" : "AFTP deployment",
           "IgnoreApplicationStopFailures" : "true",
-          ""
           "Revision" : {
             "RevisionType" : "GitHub",
             "GitHubLocation" : {
